@@ -178,6 +178,7 @@ struct Text
 	uint	org;
 	uint	q0;
 	uint	q1;
+	uint	selmsec;
 	int	what;
 	int	tabstop;
 	Window	*w;
