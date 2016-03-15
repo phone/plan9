@@ -137,6 +137,7 @@ static void makeicon(void);
 static void makemenu(void);
 static void makewin(char*);
 static void sendmouse(void);
+static void kicklabel0(char*);
 static void setcursor0(Cursor*);
 static void togglefs(void);
 static void acceptresizing(int);
@@ -159,6 +160,7 @@ static NSRect dilate(NSRect);
 		detachDrawingThread:@selector(callservep9p:)
 		toTarget:[self class] withObject:nil];
 }
+
 - (void)windowDidBecomeKey:(id)arg
 {
 	getmousepos();
@@ -231,6 +233,7 @@ static NSRect dilate(NSRect);
 + (void)callflushimg:(NSValue*)v{ flushimg([v rectValue]);}
 + (void)callmakewin:(NSValue*)v{ makewin([v pointerValue]);}
 + (void)callsetcursor0:(NSValue*)v{ setcursor0([v pointerValue]);}
++ (void)callkicklabel0:(NSValue*)v{ kicklabel0([v pointerValue]);}
 @end
 
 static Memimage* initimg(void);
@@ -298,6 +301,41 @@ attachscreen(char *label, char *winsize)
 	[win.content setHidden:NO];
 	[super deminiaturize:arg];
 }
+
+- (NSDragOperation)draggingEntered:(id)arg
+{
+	NSPasteboard *b;
+	NSDragOperation op;
+	
+	op = [arg draggingSourceOperationMask];
+	b = [arg draggingPasteboard];
+	
+	if([[b types] containsObject:NSFilenamesPboardType])
+	if(op&NSDragOperationLink)
+		return NSDragOperationLink;
+	
+	return NSDragOperationNone;
+}
+
+- (BOOL)performDragOperation:(id)arg
+{
+	NSPasteboard *b;
+	NSArray *files;
+	int i, n;
+
+	b = [arg draggingPasteboard];
+	if(![[b types] containsObject:NSFilenamesPboardType])
+		return NO;
+
+	files = [b propertyListForType:NSFilenamesPboardType];
+	n = [files count];
+	for(i=0; i<n; i++)
+	if(fork() == 0)
+		execl("macedit", "macedit", [[files objectAtIndex:i] UTF8String], nil);
+
+	return YES;
+}
+
 @end
 
 double
@@ -353,6 +391,9 @@ makewin(char *s)
 		NSWindowCollectionBehaviorFullScreenPrimary];
 #endif
 	[w setContentMinSize:NSMakeSize(128,128)];
+
+	[w registerForDraggedTypes:[NSArray arrayWithObjects: 
+		NSFilenamesPboardType, nil]];
 
 	win.ofs[0] = w;
 	win.ofs[1] = [[appwin alloc]
@@ -854,6 +895,8 @@ getkeyboard(NSEvent *e)
 	case NSFlagsChanged:
 		if(in.mbuttons || in.kbuttons){
 			in.kbuttons = 0;
+			if(m & NSControlKeyMask)
+				in.kbuttons |= 1;
 			if(m & NSAlternateKeyMask)
 				in.kbuttons |= 2;
 			if(m & NSCommandKeyMask)
@@ -1319,10 +1362,18 @@ putsnarf(char *s)
 void
 kicklabel(char *label)
 {
-	NSString *s;
-
 	if(label == nil)
 		return;
+
+	[appdelegate
+		performSelectorOnMainThread:@selector(callkicklabel0:)
+		withObject:[NSValue valueWithPointer:label]
+		waitUntilDone:YES];
+}
+
+static void
+kicklabel0(char *label) {
+	NSString *s;
 
 	s = [[NSString alloc] initWithUTF8String:label];
 	[win.ofs[0] setTitle:s];
