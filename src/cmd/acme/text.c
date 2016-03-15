@@ -377,7 +377,7 @@ textinsert(Text *t, uint q0, Rune *r, uint n, int tofile)
 					textscrdraw(u);
 				}
 			}
-					
+
 	}
 	if(q0 < t->iq1)
 		t->iq1 += n;
@@ -538,7 +538,7 @@ textbswidth(Text *t, Rune c)
 		if(r == '\n'){		/* eat at most one more character */
 			if(q == t->q0)	/* eat the newline */
 				--q;
-			break; 
+			break;
 		}
 		if(c == 0x17){
 			eq = isalnum(r);
@@ -663,9 +663,11 @@ texttype(Text *t, Rune r)
 	Text *u;
 
 	if(t->what!=Body && t->what!=Tag && r=='\n')
-		return;
+		goto Ret;
 	if(t->what == Tag)
 		t->w->tagsafe = FALSE;
+
+	uint now = nsec()/1000000; /* msec */
 
 	nr = 1;
 	rp = &r;
@@ -674,12 +676,12 @@ texttype(Text *t, Rune r)
 		typecommit(t);
 		if(t->q0 > 0)
 			textshow(t, t->q0-1, t->q0-1, TRUE);
-		return;
+		goto Ret;
 	case Kright:
 		typecommit(t);
 		if(t->q1 < t->file->b.nc)
 			textshow(t, t->q1+1, t->q1+1, TRUE);
-		return;
+                goto Ret;
 	case Kdown:
 		if(t->what == Tag)
 			goto Tagdown;
@@ -697,7 +699,7 @@ texttype(Text *t, Rune r)
 	case_Down:
 		q0 = t->org+frcharofpt(&t->fr, Pt(t->fr.r.min.x, t->fr.r.min.y+n*t->fr.font->height));
 		textsetorigin(t, q0, TRUE);
-		return;
+                goto Ret;
 	case Kup:
 		if(t->what == Tag)
 			goto Tagup;
@@ -713,7 +715,7 @@ texttype(Text *t, Rune r)
 	case_Up:
 		q0 = textbacknl(t, t->org, n);
 		textsetorigin(t, q0, TRUE);
-		return;
+                goto Ret;
 	case Khome:
 		typecommit(t);
 		if(t->org > t->iq1) {
@@ -721,7 +723,7 @@ texttype(Text *t, Rune r)
 			textsetorigin(t, q0, TRUE);
 		} else
 			textshow(t, 0, 0, FALSE);
-		return;
+                goto Ret;
 	case Kend:
 		typecommit(t);
 		if(t->iq1 > t->org+t->fr.nchars) {
@@ -733,7 +735,7 @@ texttype(Text *t, Rune r)
 			textsetorigin(t, q0, TRUE);
 		} else
 			textshow(t, t->file->b.nc, t->file->b.nc, FALSE);
-		return;
+                goto Ret;
 	case 0x01:	/* ^A: beginning of line */
 		typecommit(t);
 		/* go to where ^U would erase, if not already at BOL */
@@ -741,22 +743,37 @@ texttype(Text *t, Rune r)
 		if(t->q0>0 && textreadc(t, t->q0-1)!='\n')
 			nnb = textbswidth(t, 0x15);
 		textshow(t, t->q0-nnb, t->q0-nnb, TRUE);
-		return;
+                goto Ret;
 	case 0x05:	/* ^E: end of line */
 		typecommit(t);
 		q0 = t->q0;
 		while(q0<t->file->b.nc && textreadc(t, q0)!='\n')
 			q0++;
 		textshow(t, q0, q0, TRUE);
-		return;
+                goto Ret;
+	case Kcmd+'t':
+		typecommit(t);
+		if(!t->w->tagexpand){
+			t->w->tagexpand = TRUE;
+			winresize(t->w, t->w->r, FALSE, TRUE);
+		}
+		Point p;
+		p.x = t->w->tag.all.max.x - 1;
+		p.y = t->w->tag.all.max.y - 1;
+		moveto(mousectl, p);
+                goto Ret;
+	case Kcmd+'o':
+		typecommit(t);
+		t->eq0 = t->q0;
+                goto Ret;
 	case Kcmd+'c':	/* %C: copy */
 		typecommit(t);
 		cut(t, t, nil, TRUE, FALSE, nil, 0);
-		return;
+                goto Ret;
 	case Kcmd+'z':	/* %Z: undo */
 	 	typecommit(t);
 		undo(t, nil, nil, TRUE, 0, nil, 0);
-		return;
+                goto Ret;
 
 	Tagdown:
 		/* expand tag to show all text */
@@ -764,8 +781,8 @@ texttype(Text *t, Rune r)
 			t->w->tagexpand = TRUE;
 			winresize(t->w, t->w->r, FALSE, TRUE);
 		}
-		return;
-	
+                goto Ret;
+
 	Tagup:
 		/* shrink tag to single line */
 		if(t->w->tagexpand){
@@ -773,7 +790,19 @@ texttype(Text *t, Rune r)
 			t->w->taglines = 1;
 			winresize(t->w, t->w->r, FALSE, TRUE);
 		}
-		return;
+                goto Ret;
+	case '\n':
+		/* you get 1 second since hitting ESC to exec */
+                /* if you haven't done anything else since */
+		if(now - t->selmsec < 999 && t->q1 > t->q0){
+                        if(t->ncache != 0)
+                                error("text.type");
+			execute(t, t->q0, t->q1, FALSE, nil);
+                        cut(t, t, nil, TRUE, TRUE, nil, 0);
+                        t->eq0 = ~0;
+                        textshow(t, t->q0, t->q0, 1);
+                        goto Ret;
+                }
 	}
 	if(t->what == Body){
 		seq++;
@@ -790,7 +819,7 @@ texttype(Text *t, Rune r)
 		cut(t, t, nil, TRUE, TRUE, nil, 0);
 		textshow(t, t->q0, t->q0, 1);
 		t->iq1 = t->q0;
-		return;
+                goto Ret;
 	case Kcmd+'v':	/* %V: paste */
 		typecommit(t);
 		if(t->what == Body){
@@ -800,7 +829,7 @@ texttype(Text *t, Rune r)
 		paste(t, t, nil, TRUE, FALSE, nil, 0);
 		textshow(t, t->q0, t->q1, 1);
 		t->iq1 = t->q1;
-		return;
+                goto Ret;
 	}
 	if(t->q1 > t->q0){
 		if(t->ncache != 0)
@@ -815,25 +844,30 @@ texttype(Text *t, Rune r)
 		typecommit(t);
 		rp = textcomplete(t);
 		if(rp == nil)
-			return;
+                        goto Ret;
 		nr = runestrlen(rp);
 		break;	/* fall through to normal insertion case */
-	case 0x1B:
+	case 0x1B:	/* ESC: select since last click or C-o */
 		if(t->eq0 != ~0) {
-			if(t->eq0 <= t->q0)
+			if(t->eq0 <= t->q0) {
 				textsetselect(t, t->eq0, t->q0);
-			else
+			} else {
 				textsetselect(t, t->q0, t->eq0);
+			}
+			t->selmsec = now;
 		}
 		if(t->ncache > 0)
 			typecommit(t);
 		t->iq1 = t->q0;
-		return;
+		//fprint(2, "setting t: %p t->selmsec to: %d\n", t, now);
+		//fprint(2, "esc: t: %p t->q0: %d t->q1: %d\n", t,
+		//t->q0, t->q1);
+                return;
 	case 0x08:	/* ^H: erase character */
 	case 0x15:	/* ^U: erase line */
 	case 0x17:	/* ^W: erase word */
 		if(t->q0 == 0)	/* nothing to erase */
-			return;
+                        goto Ret;
 		nnb = textbswidth(t, r);
 		q1 = t->q0;
 		q0 = q1-nnb;
@@ -843,7 +877,7 @@ texttype(Text *t, Rune r)
 			nnb = q1-q0;
 		}
 		if(nnb <= 0)
-			return;
+                        goto Ret;
 		for(i=0; i<t->file->ntext; i++){
 			u = t->file->text[i];
 			u->nofill = TRUE;
@@ -871,19 +905,29 @@ texttype(Text *t, Rune r)
 		for(i=0; i<t->file->ntext; i++)
 			textfill(t->file->text[i]);
 		t->iq1 = t->q0;
-		return;
+                goto Ret;
 	case '\n':
-		if(t->w->autoindent){
-			/* find beginning of previous line using backspace code */
-			nnb = textbswidth(t, 0x15); /* ^U case */
-			rp = runemalloc(nnb + 1);
-			nr = 0;
-			rp[nr++] = r;
-			for(i=0; i<nnb; i++){
-				r = textreadc(t, t->q0-nnb+i);
-				if(r != ' ' && r != '\t')
-					break;
+		/* you get 1 second since hitting ESC to exec */
+		//fprint(2, "nl: t: %p t->q0: %d t->q1: %d\n", t, t->q0, t->q1);
+		//fprint(2, "nl: now: %d, t->selmsec: %d\n", now, t->selmsec);
+		if(now - t->selmsec < 999){
+			//fprint(2, "EXECCING %d -> %d \n", t->q0, t->q1);
+			//fprint(2, "maybe? %d -> %d \n", q0, q1);
+			execute(t, t->q0, t->q1, FALSE, nil);
+                        goto Ret;
+		} else {
+			if(t->w->autoindent){
+				/* find beginning of previous line using backspace code */
+				nnb = textbswidth(t, 0x15); /* ^U case */
+				rp = runemalloc(nnb + 1);
+				nr = 0;
 				rp[nr++] = r;
+				for(i=0; i<nnb; i++){
+					r = textreadc(t, t->q0-nnb+i);
+					if(r != ' ' && r != '\t')
+						break;
+					rp[nr++] = r;
+				}
 			}
 		}
 		break; /* fall through to normal code */
@@ -923,6 +967,8 @@ texttype(Text *t, Rune r)
 	if(r=='\n' && t->w!=nil)
 		wincommit(t->w, t);
 	t->iq1 = t->q0;
+Ret:
+        t->selmsec = 0;
 }
 
 void
@@ -1177,7 +1223,7 @@ void
 textsetselect(Text *t, uint q0, uint q1)
 {
 	int p0, p1, ticked;
-	
+
 	/* t->fr.p0 and t->fr.p1 are always right; t->q0 and t->q1 may be off */
 	t->q0 = q0;
 	t->q1 = q1;
@@ -1330,7 +1376,7 @@ textselect23(Text *t, uint *q0, uint *q1, Image *high, int mask)
 {
 	uint p0, p1;
 	int buts;
-	
+
 	p0 = xselect(&t->fr, mousectl, high, &p1);
 	buts = mousectl->m.buttons;
 	if((buts & mask) == 0){
@@ -1397,7 +1443,7 @@ textdoubleclick(Text *t, uint *q0, uint *q1)
 
 	if(textclickhtmlmatch(t, q0, q1))
 		return;
-	
+
 	for(i=0; left[i]!=nil; i++){
 		q = *q0;
 		l = left[i];
@@ -1429,7 +1475,7 @@ textdoubleclick(Text *t, uint *q0, uint *q1)
 			return;
 		}
 	}
-	
+
 	/* try filling out word to right */
 	while(*q1<t->file->b.nc && isalnum(textreadc(t, *q1)))
 		(*q1)++;
@@ -1503,7 +1549,7 @@ static int
 ishtmlend(Text *t, uint q, uint *q0)
 {
 	int c, c1, c2;
-	
+
 	if(q < 2)
 		return 0;
 	if(textreadc(t, --q) != '>')
@@ -1531,7 +1577,7 @@ textclickhtmlmatch(Text *t, uint *q0, uint *q1)
 {
 	int depth, n;
 	uint q, nq;
-	
+
 	q = *q0;
 	// after opening tag?  scan forward for closing tag
 	if(ishtmlend(t, q, nil) == 1) {
@@ -1568,7 +1614,7 @@ textclickhtmlmatch(Text *t, uint *q0, uint *q1)
 			q--;
 		}
 	}
-	
+
 	return 0;
 }
 
