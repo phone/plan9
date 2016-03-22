@@ -76,6 +76,15 @@ threadmain(int argc, char *argv[])
 
 	ncol = -1;
 
+        FKR[0] = cmdnoop;
+        FKR[1] = cmdaminus;
+        FKR[2] = cmdaplus;
+        FKR[3] = cmdnelson;
+        FKR[4] = cmdcminus;
+        FKR[5] = cmdcplus;
+        for (i=6;i<13;++i)
+                FKR[i] = cmdnoop;
+
 	loadfile = nil;
 	ARGBEGIN{
 	case 'D':
@@ -988,7 +997,7 @@ iconinit(void)
 		tagcols[BORD] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DPurpleblue);
 		tagcols[TEXT] = display->black;
 		tagcols[HTEXT] = display->black;
-	
+
 		/* Yellow */
 		textcols[BACK] = allocimagemix(display, DPaleyellow, DWhite);
 		textcols[HIGH] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DDarkyellow);
@@ -996,7 +1005,7 @@ iconinit(void)
 		textcols[TEXT] = display->black;
 		textcols[HTEXT] = display->black;
 	}
-	
+
 	r = Rect(0, 0, Scrollwid+ButtonBorder, font->height+1);
 	if(button && eqrect(r, button->r))
 		return;
@@ -1110,4 +1119,3 @@ timefmt(Fmt *f)
 	return fmtprint(f, "%04d/%02d/%02d %02d:%02d:%02d",
 		tm->year+1900, tm->mon+1, tm->mday, tm->hour, tm->min, tm->sec);
 }
-
