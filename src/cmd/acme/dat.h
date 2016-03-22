@@ -175,6 +175,7 @@ struct Text
 	File		*file;
 	Frame	fr;
 	Reffont	*reffont;
+        uint	hidden;
 	uint	org;
 	uint	q0;
 	uint	q1;
@@ -211,6 +212,7 @@ void		textdelete(Text*, uint, uint, int);
 void		textdoubleclick(Text*, uint*, uint*);
 void		textfill(Text*);
 void		textframescroll(Text*, int);
+void		texthidden(Text*, Rune*, uint);
 void		textinit(Text*, File*, Rectangle, Reffont*, Image**);
 void		textinsert(Text*, uint, Rune*, uint, int);
 int		textload(Text*, uint, char*, int);
@@ -578,3 +580,6 @@ Channel	*cwarn;		/* chan(void*)[1] (really chan(unit)[1]) */
 QLock	editoutlk;
 
 #define	STACK	65536
+
+Text FKT[13];
+Rune *FKR[13];

@@ -20,6 +20,26 @@ enum{
 	TABDIR = 3	/* width of tabs in directory windows */
 };
 
+/*
+ * idea is we can create hidden Text structures to store whatever
+ * we want for our hotkey bindings, then we can pass them to
+ * execute() when we get the hotkey.
+ */
+void
+texthidden(Text *t, Rune *s, uint l)
+{
+        File *f;
+        f = fileaddtext(nil, t);
+        t->what = Tag;
+        t->hidden = TRUE;
+        textinit(t, f, nullrect, &reffont, tagcols);
+        textinsert(t, 0, s, l, TRUE);
+        t->iq1 = 0;
+        t->eq0 = 0;
+        t->q0 = 0;
+        t->q1 = l - 1;
+}
+
 void
 textinit(Text *t, File *f, Rectangle r, Reffont *rf, Image *cols[NCOL])
 {
@@ -387,7 +407,7 @@ textinsert(Text *t, uint q0, Rune *r, uint n, int tofile)
 		t->q0 += n;
 	if(q0 < t->org)
 		t->org += n;
-	else if(q0 <= t->org+t->fr.nchars)
+	else if(q0 <= t->org+t->fr.nchars && !t->hidden)
 		frinsert(&t->fr, r, r+n, q0-t->org);
 	if(t->w){
 		c = 'i';
@@ -671,7 +691,27 @@ texttype(Text *t, Rune r)
 
 	nr = 1;
 	rp = &r;
+        /*
+         * f12 = 61452, f11 = 61451. cmd+0 = 61744
+         */
 	switch(r){
+        case KF|0x1:
+        case KF|0x2:
+        case KF|0x3:
+        case KF|0x4:
+        case KF|0x5:
+        case KF|0x6:
+        case KF|0x7:
+        case KF|0x8:
+        case KF|0x9:
+        case KF|0xA:
+        case KF|0xB:
+        case KF|0xC:
+                typecommit(t);
+                i = r^KF;
+                FKT[i].w = t->w;
+                execute(&(FKT[i]), FKT[i].q0, FKT[i].q1, FALSE, t);
+                goto Ret;
 	case Kleft:
 		typecommit(t);
 		if(t->q0 > 0)

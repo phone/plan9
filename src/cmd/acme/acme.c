@@ -42,6 +42,13 @@ char		*fontnames[2] =
 	"/lib/font/bit/lucm/unicode.9.font"
 };
 
+Rune cmdaplus[] = {'|','a','+', 0};
+Rune cmdaminus[] = {'|','a','-', 0};
+Rune cmdnelson[] = {'n','e','l','s','o','n',0};
+Rune cmdcplus[] = {'|','c','+',0};
+Rune cmdcminus[] = {'|','c','-',0};
+Rune cmdnoop[] = {':',0};
+
 Command *command;
 
 void	shutdownthread(void*);
@@ -59,7 +66,7 @@ derror(Display *d, char *errorstr)
 void
 threadmain(int argc, char *argv[])
 {
-	int i;
+	int i, j;
 	char *p, *loadfile;
 	Column *c;
 	int ncol;
@@ -275,6 +282,12 @@ threadmain(int argc, char *argv[])
 	threadcreate(newwindowthread, nil, STACK);
 /*	threadcreate(shutdownthread, nil, STACK); */
 	threadnotify(shutdown, 1);
+        for (i=1; i<13; ++i) {
+		for (j=0; FKR[i][j]; ++j){}
+        	texthidden(&(FKT[i]), FKR[i], j+1);
+	}
+/*        Rune f12r[] = {'|','a','+', 0}; */
+/*        texthidden(&f12t, f12r, 4); */
 	recvul(cexit);
 	killprocs();
 	threadexitsall(nil);
