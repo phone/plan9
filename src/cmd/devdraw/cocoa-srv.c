@@ -77,7 +77,7 @@ servep9p(void)
 	Wsysmsg m;
 
 	fmtinstall('W', drawfcallfmt);
-	
+
 	mbuf = nil;
 	nmbuf = 0;
 	while((n = read(3, buf, 4)) == 4){
@@ -106,15 +106,15 @@ void
 replyerror(Wsysmsg *m)
 {
 	char err[256];
-	
+
 	rerrstr(err, sizeof err);
 	m->type = Rerror;
 	m->error = err;
 	replymsg(m);
 }
 
-/* 
- * Handle a single wsysmsg. 
+/*
+ * Handle a single wsysmsg.
  * Might queue for later (kbd, mouse read)
  */
 void
@@ -123,7 +123,7 @@ runmsg(Wsysmsg *m)
 	static uchar buf[65536];
 	int n;
 	Memimage *i;
-	
+
 	switch(m->type){
 	case Tinit:
 		memimageinit();
@@ -168,7 +168,7 @@ runmsg(Wsysmsg *m)
 			setcursor(&m->cursor);
 		replymsg(m);
 		break;
-			
+
 	case Tbouncemouse:
 	//	_xbouncemouse(&m->mouse);
 		replymsg(m);
@@ -210,12 +210,12 @@ runmsg(Wsysmsg *m)
 		else
 			replymsg(m);
 		break;
-	
+
 	case Ttop:
 		topwin();
 		replymsg(m);
 		break;
-	
+
 	case Tresize:
 	//	_xresizewindow(m->rect);
 		replymsg(m);
@@ -237,7 +237,7 @@ replymsg(Wsysmsg *m)
 	/* T -> R msg */
 	if(m->type%2 == 0)
 		m->type++;
-		
+
 	if(trace) fprint(2, "-> %W\n", m);
 	/* copy to output buffer */
 	n = sizeW2M(m);
@@ -263,7 +263,7 @@ void
 matchkbd(void)
 {
 	Wsysmsg m;
-	
+
 	if(kbd.stall)
 		return;
 	while(kbd.ri != kbd.wi && kbdtags.ri != kbdtags.wi){
@@ -285,7 +285,7 @@ void
 matchmouse(void)
 {
 	Wsysmsg m;
-	
+
 	while(mouse.ri != mouse.wi && mousetags.ri != mousetags.wi){
 		m.type = Rrdmouse;
 		m.tag = mousetags.t[mousetags.ri++];
@@ -309,7 +309,7 @@ void
 mousetrack(int x, int y, int b, uint ms)
 {
 	Mouse *m;
-	
+
 	if(x < mouserect.min.x)
 		x = mouserect.min.x;
 	if(x > mouserect.max.x)
@@ -381,7 +381,7 @@ keystroke(int c)
 		nk = 0;
 		return;
 	}
-	if(c == Kcmd+'r') {
+	if(c == Kcmd+'0') {
 		if(forcedpi)
 			forcedpi = 0;
 		else if(displaydpi >= 200)

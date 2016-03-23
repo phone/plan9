@@ -791,7 +791,7 @@ texttype(Text *t, Rune r)
 			q0++;
 		textshow(t, q0, q0, TRUE);
                 goto Ret;
-	case Kcmd+'t':
+	case 0x14:	/* ^T: mouse to Tag */
 		typecommit(t);
 		if(!t->w->tagexpand){
 			t->w->tagexpand = TRUE;
@@ -802,7 +802,7 @@ texttype(Text *t, Rune r)
 		p.y = t->w->tag.all.max.y - 1;
 		moveto(mousectl, p);
                 goto Ret;
-	case Kcmd+'o':
+	case 0x0F:	/* ^O: set ESC mark, as though you clicked */
 		typecommit(t);
 		t->eq0 = t->q0;
                 goto Ret;
@@ -810,7 +810,12 @@ texttype(Text *t, Rune r)
 		typecommit(t);
 		cut(t, t, nil, TRUE, FALSE, nil, 0);
                 goto Ret;
-	case Kcmd+'z':	/* %Z: undo */
+	case Kcmd+'r':	/* %R: Redo */
+                /* (*e->fn)(t, seltext, argt, e->flag1, e->flag2, s, n);*/
+		typecommit(t);
+		undo(t, nil, nil, FALSE, 0, nil, 0);
+                goto Ret;
+	case Kcmd+'z':	/* %Z: Undo */
 	 	typecommit(t);
 		undo(t, nil, nil, TRUE, 0, nil, 0);
                 goto Ret;
@@ -834,7 +839,8 @@ texttype(Text *t, Rune r)
 	case '\n':
 		/* you get 1 second since hitting ESC to exec */
                 /* if you haven't done anything else since */
-		if(now - t->selmsec < 999 && t->q1 > t->q0){
+		if(now - t->selmsec < (1000 * ESCENTRSECONDS)
+                && t->q1 > t->q0) {
                         if(t->ncache != 0)
                                 error("text.type");
 			execute(t, t->q0, t->q1, FALSE, nil);
@@ -843,6 +849,7 @@ texttype(Text *t, Rune r)
                         textshow(t, t->q0, t->q0, 1);
                         goto Ret;
                 }
+		/* fallthru otherwise */
 	}
 	if(t->what == Body){
 		seq++;
@@ -899,9 +906,6 @@ texttype(Text *t, Rune r)
 		if(t->ncache > 0)
 			typecommit(t);
 		t->iq1 = t->q0;
-		//fprint(2, "setting t: %p t->selmsec to: %d\n", t, now);
-		//fprint(2, "esc: t: %p t->q0: %d t->q1: %d\n", t,
-		//t->q0, t->q1);
                 return;
 	case 0x08:	/* ^H: erase character */
 	case 0x15:	/* ^U: erase line */
@@ -947,30 +951,20 @@ texttype(Text *t, Rune r)
 		t->iq1 = t->q0;
                 goto Ret;
 	case '\n':
-		/* you get 1 second since hitting ESC to exec */
-		//fprint(2, "nl: t: %p t->q0: %d t->q1: %d\n", t, t->q0, t->q1);
-		//fprint(2, "nl: now: %d, t->selmsec: %d\n", now, t->selmsec);
-		if(now - t->selmsec < 999){
-			//fprint(2, "EXECCING %d -> %d \n", t->q0, t->q1);
-			//fprint(2, "maybe? %d -> %d \n", q0, q1);
-			execute(t, t->q0, t->q1, FALSE, nil);
-                        goto Ret;
-		} else {
-			if(t->w->autoindent){
-				/* find beginning of previous line using backspace code */
-				nnb = textbswidth(t, 0x15); /* ^U case */
-				rp = runemalloc(nnb + 1);
-				nr = 0;
+		if(t->w->autoindent){
+			/* find beginning of previous line using backspace code */
+			nnb = textbswidth(t, 0x15); /* ^U case */
+			rp = runemalloc(nnb + 1);
+			nr = 0;
+			rp[nr++] = r;
+			for(i=0; i<nnb; i++){
+				r = textreadc(t, t->q0-nnb+i);
+				if(r != ' ' && r != '\t')
+					break;
 				rp[nr++] = r;
-				for(i=0; i<nnb; i++){
-					r = textreadc(t, t->q0-nnb+i);
-					if(r != ' ' && r != '\t')
-						break;
-					rp[nr++] = r;
-				}
 			}
 		}
-		break; /* fall through to normal code */
+	break; /* fall through to normal code */
 	}
 	/* otherwise ordinary character; just insert, typically in caches of all texts */
 	for(i=0; i<t->file->ntext; i++){
