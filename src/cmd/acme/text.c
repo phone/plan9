@@ -573,6 +573,32 @@ textbswidth(Text *t, Rune c)
 }
 
 int
+textfswidth(Text *t)
+{
+	uint q;
+	Rune r;
+	int skipping;
+
+	q = t->q0;
+	skipping = TRUE;
+
+	if(t->q0 >=  t->file->b.nc)
+		return 0;
+
+	r = textreadc(t, q-1);
+ //print("r %d\n", r);
+	while(r != '\n'){
+ //print("r loop %d\n", r);
+		if(q >=  t->file->b.nc)
+			break;
+		++q;
+		r = textreadc(t, q-1);
+	}
+//print("fsw: t->q0 %d q %d tfnc %d\n", t->q0, q, t->file->b.nc);
+	return q-t->q0;
+}
+
+int
 textfilewidth(Text *t, uint q0, int oneelement)
 {
 	uint q;
@@ -677,7 +703,7 @@ void
 texttype(Text *t, Rune r)
 {
 	uint q0, q1;
-	int nnb, nb, n, i;
+	int nnb, nb, n, i, nlcount;
 	int nr;
 	Rune *rp;
 	Text *u;
@@ -692,31 +718,17 @@ texttype(Text *t, Rune r)
 	nr = 1;
 	rp = &r;
         /*
-         * f12 = 61452, f11 = 61451. cmd+0 = 61744
+         * Emacs keys ^D, ^K, are from ron minnich's smacme at
+	 * http://plan9.bell-labs.com/sources/contrib/rminnich/smacme/text.c
          */
 	switch(r){
-        case KF|0x1:
-        case KF|0x2:
-        case KF|0x3:
-        case KF|0x4:
-        case KF|0x5:
-        case KF|0x6:
-        case KF|0x7:
-        case KF|0x8:
-        case KF|0x9:
-        case KF|0xA:
-        case KF|0xB:
-        case KF|0xC:
-                typecommit(t);
-                i = r^KF;
-                FKT[i].w = t->w;
-                execute(&(FKT[i]), FKT[i].q0, FKT[i].q1, FALSE, t);
-                goto Ret;
+	case 0x02:	/* ^B */
 	case Kleft:
 		typecommit(t);
 		if(t->q0 > 0)
 			textshow(t, t->q0-1, t->q0-1, TRUE);
 		goto Ret;
+	case 0x06:	/* ^F */
 	case Kright:
 		typecommit(t);
 		if(t->q1 < t->file->b.nc)
@@ -776,6 +788,74 @@ texttype(Text *t, Rune r)
 		} else
 			textshow(t, t->file->b.nc, t->file->b.nc, FALSE);
                 goto Ret;
+	case 0x04:	/* ^D: forward delete */
+		/* only delete if there is something to delete */
+		if(t->q1 < t->file->b.nc){
+			/* I'm lazy. Move right, then backspace. */
+			typecommit(t);
+			textshow(t, t->q1+1, t->q1+1, TRUE);
+			/* well, this is shit code but ...  */
+			r = 0x08;
+		} 
+		break;
+	case 0x0e:	/* ^N: next line */
+		typecommit(t);
+		/* go to where ^U would erase, if not already at BOL */
+		nnb = 0;
+		if(t->q0>0 && textreadc(t, t->q0-1) != '\n')
+			nnb = textbswidth(t, 0x15);
+		/* nnb is our column */
+		q0 = t->q0;
+		while(q0<t->file->b.nc && textreadc(t, q0) != '\n')
+			q0++;
+		q0++;
+//print("%d: q0 %d nnb %d\n", __LINE__, q0, nnb);
+		nlcount = q0 + nnb;
+		for(nlcount = q0 + nnb; q0 < nlcount; ++q0){
+			if(q0 >= t->file->b.nc){
+				q0 = t->q0;
+				break;
+			}else if(textreadc(t, q0) == '\n'){
+				break;
+			}
+		}
+		if (q0 > t->file->b.nc)
+			q0 = t->file->b.nc;
+		textshow(t, q0, q0, TRUE);	
+		goto Ret;
+	case 0x10:	/* ^P: previous line */
+		/* fairly simple, not. start at your column, and go 
+		 * left, until you get to that column again
+		 */
+		typecommit(t);
+//print("tq0 %d\n", t->q0);
+		/* move back. At BOF or first nl, set col. 
+	         * at BOF or 2nd nl, break
+                 */
+		nnb = 0;
+		nlcount = 0;
+		if(t->q0 > 0 && textreadc(t, t->q0-1) != '\n')
+			nnb = textbswidth(t, 0x15); /* as if ^U */
+		q0 = t->q0 - nnb;
+		/* now we're at BOL, go back 1 more full line. */
+//print("%d: q0 %d nnb %d\n", __LINE__, q0, nnb);
+		if(q0 > 0){
+//print("%d: q0 %d\n", __LINE__, q0);
+			for(i = q0-2; i > 0; --i){
+				 if(textreadc(t, i) == '\n'){
+				 	i++;
+					break;
+				 }	
+			}
+			nlcount = q0 - i;
+		}else{
+			/* we're on the first line, do nothing */
+			goto Ret;
+		}
+		q0 -= min(nlcount, nlcount-nnb);
+//print("%d: q0 %d nlcount %d\n", __LINE__, q0, nlcount);
+		textshow(t, q0, q0, TRUE);	
+		goto Ret;
 	case 0x01:	/* ^A: beginning of line */
 		typecommit(t);
 		/* go to where ^U would erase, if not already at BOL */
@@ -886,7 +966,7 @@ texttype(Text *t, Rune r)
 	}
 	textshow(t, t->q0, t->q0, 1);
 	switch(r){
-	case 0x06:	/* ^F: complete */
+	case 0x0c:	/* ^F: complete */
 	case Kins:
 		typecommit(t);
 		rp = textcomplete(t);
@@ -907,6 +987,43 @@ texttype(Text *t, Rune r)
 			typecommit(t);
 		t->iq1 = t->q0;
                 return;
+	case 0x0b:	/* ^K: erase til EOL */
+//		if(t->q0 == 0)	/* nothing to erase */
+//			goto Ret;
+//print("tq0 %d tq1 %d\n", t->q0, t->q1);
+		nnb = textfswidth(t);
+		q1 = t->q0 + nnb - 1;
+		q0 = t->q0 - 1;
+//print("q0 %d q1 %d\n", q0, q1);
+		if(nnb <= 0)
+			goto Ret;
+		for(i=0; i<t->file->ntext; i++){
+			u = t->file->text[i];
+			u->nofill = TRUE;
+			nb = nnb;
+			n = u->ncache;
+			if(n > 0){
+				if(q1 != u->cq0+n)
+					error("text.type backspace");
+				if(n > nb)
+					n = nb;
+				u->ncache -= n;
+				textdelete(u, q1-n, q1, FALSE);
+				nb -= n;
+			}
+			if(u->eq0==q1 || u->eq0==~0)
+				u->eq0 = q0;
+			if(nb && u==t)
+				textdelete(u, q0, q0+nb, TRUE);
+			if(u != t)
+				textsetselect(u, u->q0, u->q1);
+			else
+				textsetselect(t, q0, q0);
+			u->nofill = FALSE;
+		}
+		for(i=0; i<t->file->ntext; i++)
+			textfill(t->file->text[i]);
+		goto Ret;
 	case 0x08:	/* ^H: erase character */
 	case 0x15:	/* ^U: erase line */
 	case 0x17:	/* ^W: erase word */
