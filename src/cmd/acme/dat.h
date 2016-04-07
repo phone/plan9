@@ -581,6 +581,3 @@ QLock	editoutlk;
 
 #define	STACK	65536
 #define ESCENTRSECONDS	15
-
-Text FKT[13];
-Rune *FKR[13];

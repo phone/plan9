@@ -16,29 +16,16 @@ Image	*tagcols[NCOL];
 Image	*textcols[NCOL];
 static Rune Ldot[] = { '.', 0 };
 
+Rune Lcomma[] = {',',0};
+char *cmdnelson = "nelson";
+char *cmdaplus = "|a+";
+char *cmdaminus = "|a-";
+char *cmdcplus = "|c+";
+char *cmdcminus = "|c-";
+
 enum{
 	TABDIR = 3	/* width of tabs in directory windows */
 };
-
-/*
- * idea is we can create hidden Text structures to store whatever
- * we want for our hotkey bindings, then we can pass them to
- * execute() when we get the hotkey.
- */
-void
-texthidden(Text *t, Rune *s, uint l)
-{
-        File *f;
-        f = fileaddtext(nil, t);
-        t->what = Tag;
-        t->hidden = TRUE;
-        textinit(t, f, nullrect, &reffont, tagcols);
-        textinsert(t, 0, s, l, TRUE);
-        t->iq1 = 0;
-        t->eq0 = 0;
-        t->q0 = 0;
-        t->q1 = l - 1;
-}
 
 void
 textinit(Text *t, File *f, Rectangle r, Reffont *rf, Image *cols[NCOL])
@@ -582,17 +569,16 @@ textfswidth(Text *t)
 	q = t->q0;
 	skipping = TRUE;
 
-	if(t->q0 >=  t->file->b.nc)
+	if(t->q0 >= t->file->b.nc)
 		return 0;
 
-	r = textreadc(t, q-1);
+	r = textreadc(t, q);
  //print("r %d\n", r);
 	while(r != '\n'){
  //print("r loop %d\n", r);
-		if(q >=  t->file->b.nc)
+		if(q >= t->file->b.nc)
 			break;
-		++q;
-		r = textreadc(t, q-1);
+		r = textreadc(t, ++q);
 	}
 //print("fsw: t->q0 %d q %d tfnc %d\n", t->q0, q, t->file->b.nc);
 	return q-t->q0;
@@ -703,6 +689,7 @@ void
 texttype(Text *t, Rune r)
 {
 	uint q0, q1;
+	char *b;
 	int nnb, nb, n, i, nlcount;
 	int nr;
 	Rune *rp;
@@ -886,6 +873,34 @@ texttype(Text *t, Rune r)
 		typecommit(t);
 		t->eq0 = t->q0;
                 goto Ret;
+	case Kcmd+'a':	/* %A: select all text in window */
+		editcmd(t, Lcomma, 1);
+		goto Ret;
+	case Kcmd+'-':	/* %-: |c- -- uncomment */
+		incref(&t->w->ref);
+		b = strdup(cmdcminus);
+		run(t->w, b, nil, 0, TRUE, nil, nil, FALSE);
+		goto Ret;
+	case Kcmd+'=':	/* %+: |c+ -- comment */
+		incref(&t->w->ref);
+		b = strdup(cmdcplus);
+		run(t->w, b, nil, 0, TRUE, nil, nil, FALSE);
+		goto Ret;
+	case Kcmd+'[':	/* %[: |a- -- outdent */
+		incref(&t->w->ref);
+		b = strdup(cmdaminus);
+		run(t->w, b, nil, 0, TRUE, nil, nil, FALSE);
+		goto Ret;
+	case Kcmd+']':	/* %]: |a+ -- indent */
+		incref(&t->w->ref);
+		b = strdup(cmdaplus);
+		run(t->w, b, nil, 0, TRUE, nil, nil, FALSE);
+		goto Ret;
+	case Kcmd+'n':	/* %N: nelson */
+		incref(&t->w->ref);
+		b = strdup(cmdnelson);
+		run(t->w, b, nil, 0, TRUE, nil, nil, FALSE);
+		goto Ret;
 	case Kcmd+'c':	/* %C: copy */
 		typecommit(t);
 		cut(t, t, nil, TRUE, FALSE, nil, 0);
@@ -992,10 +1007,12 @@ texttype(Text *t, Rune r)
 //			goto Ret;
 //print("tq0 %d tq1 %d\n", t->q0, t->q1);
 		nnb = textfswidth(t);
-		q1 = t->q0 + nnb - 1;
-		q0 = t->q0 - 1;
+		if(nnb == 0)
+			nnb++;
+		q1 = t->q0 + nnb;
+		q0 = t->q0;
 //print("q0 %d q1 %d\n", q0, q1);
-		if(nnb <= 0)
+		if(nnb < 0)
 			goto Ret;
 		for(i=0; i<t->file->ntext; i++){
 			u = t->file->text[i];
