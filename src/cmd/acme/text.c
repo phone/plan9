@@ -693,6 +693,7 @@ texttype(Text *t, Rune r)
 	int nnb, nb, n, i, nlcount;
 	int nr;
 	Rune *rp;
+	Runestr dir;
 	Text *u;
 
 	if(t->what!=Body && t->what!=Tag && r=='\n')
@@ -897,9 +898,15 @@ texttype(Text *t, Rune r)
 		run(t->w, b, nil, 0, TRUE, nil, nil, FALSE);
 		goto Ret;
 	case Kcmd+'n':	/* %N: nelson */
+		dir = dirname(t, nil, 0);
+		if(dir.nr==1 && dir.r[0]=='.'){	/* sigh */
+			free(dir.r);
+			dir.r = nil;
+			dir.nr = 0;
+		}
 		incref(&t->w->ref);
 		b = strdup(cmdnelson);
-		run(t->w, b, nil, 0, TRUE, nil, nil, FALSE);
+		run(t->w, b, dir.r, dir.nr, TRUE, nil, nil, FALSE);
 		goto Ret;
 	case Kcmd+'c':	/* %C: copy */
 		typecommit(t);
