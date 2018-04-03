@@ -17,6 +17,8 @@ Image	*tagcols[NCOL];
 Image	*textcols[NCOL];
 static Rune Ldot[] = { '.', 0 };
 
+char *cmdnelson = "nelson";
+
 enum{
 	TABDIR = 3	/* width of tabs in directory windows */
 };
@@ -535,13 +537,32 @@ textreadc(Text *t, uint q)
 int
 textbswidth(Text *t, Rune c)
 {
-	uint q, eq;
+	uint q, eq, i;
 	Rune r;
 	int skipping;
+	int spctolf, ret;
 
 	/* there is known to be at least one character to erase */
-	if(c == 0x08)	/* ^H: erase character */
+	if(c == 0x08){	/* ^H: erase character */
+		if (spacespertab) {
+			spctolf = TRUE;
+			q = t->q0;
+			i = 0;
+			while(q > 0 && (r = textreadc(t, q-1)) != '\n') {
+				if (r != ' ') {
+					spctolf = FALSE;
+					break;
+				}
+				--q;
+				++i;
+			}
+			if (spctolf) {
+				ret = min(spacespertab, i);
+				return (ret == 0 ? 1 : ret);
+			}
+		}
 		return 1;
+	}
 	q = t->q0;
 	skipping = TRUE;
 	while(q > 0){
@@ -668,9 +689,11 @@ void
 texttype(Text *t, Rune r)
 {
 	uint q0, q1;
+	char *b;
 	int nnb, nb, n, i;
 	int nr;
 	Rune *rp;
+	Runestr dir;
 	Text *u;
 
 	if(t->what!=Body && t->what!=Tag && r=='\n')
@@ -759,6 +782,17 @@ texttype(Text *t, Rune r)
 		while(q0<t->file->b.nc && textreadc(t, q0)!='\n')
 			q0++;
 		textshow(t, q0, q0, TRUE);
+		return;
+	case Kcmd+'n': /* %C: nelson */
+		dir = dirname(t, nil, 0);
+		if(dir.nr==1 && dir.r[0]=='.'){	/* sigh */
+			free(dir.r);
+			dir.r = nil;
+			dir.nr = 0;
+		}
+		incref(&t->w->ref);
+		b = strdup(cmdnelson);
+		run(t->w, b, dir.r, dir.nr, TRUE, nil, nil, FALSE);
 		return;
 	case Kcmd+'c':	/* %C: copy */
 		typecommit(t);
@@ -902,6 +936,14 @@ texttype(Text *t, Rune r)
 			}
 		}
 		break; /* fall through to normal code */
+	case '\t':
+		if (spacespertab) {
+			for (i=0; i<spacespertab; ++i){
+				texttype(t, ' ');
+			}
+			return;
+		}
+		/* fall through when not spacespertab */
 	}
 	/* otherwise ordinary character; just insert, typically in caches of all texts */
 	for(i=0; i<t->file->ntext; i++){

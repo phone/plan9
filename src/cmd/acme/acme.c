@@ -131,6 +131,11 @@ threadmain(int argc, char *argv[])
 	quotefmtinstall();
 	fmtinstall('t', timefmt);
 
+	p = getenv("acmespacespertab");
+	if(p != nil){
+		spacespertab = strtoul(p, nil, 0);
+		free(p);
+	}
 	cputype = getenv("cputype");
 	objtype = getenv("objtype");
 	home = getenv("HOME");

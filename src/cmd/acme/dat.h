@@ -512,6 +512,8 @@ uint		globalincref;
 uint		seq;
 uint		maxtab;	/* size of a tab, in units of the '0' character */
 
+uint		spacespertab;
+
 Display		*display;
 Image		*screen;
 Font			*font;
