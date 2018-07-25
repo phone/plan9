@@ -18,6 +18,7 @@ Image	*textcols[NCOL];
 static Rune Ldot[] = { '.', 0 };
 
 char *cmdnelson = "nelson";
+char *cmdchooseacmebuffer = "choose-acme-buffer";
 
 enum{
 	TABDIR = 3	/* width of tabs in directory windows */
@@ -792,6 +793,17 @@ texttype(Text *t, Rune r)
 		}
 		incref(&t->w->ref);
 		b = strdup(cmdnelson);
+		run(t->w, b, dir.r, dir.nr, TRUE, nil, nil, FALSE);
+		return;
+	case Kcmd+'b': /* %B: choose-acme-buffer */
+		dir = dirname(t, nil, 0);
+		if(dir.nr==1 && dir.r[0]=='.'){	/* sigh */
+			free(dir.r);
+			dir.r = nil;
+			dir.nr = 0;
+		}
+		incref(&t->w->ref);
+		b = strdup(cmdchooseacmebuffer);
 		run(t->w, b, dir.r, dir.nr, TRUE, nil, nil, FALSE);
 		return;
 	case Kcmd+'c':	/* %C: copy */
