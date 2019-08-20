@@ -785,6 +785,7 @@ texttype(Text *t, Rune r)
 			q0++;
 		textshow(t, q0, q0, TRUE);
 		return;
+	case 0xE:
 	case Kcmd+'n': /* %C: nelson */
 		dir = dirname(t, nil, 0);
 		if(dir.nr==1 && dir.r[0]=='.'){	/* sigh */
@@ -807,6 +808,7 @@ texttype(Text *t, Rune r)
 		b = strdup(cmdchooseacmebuffer);
 		run(t->w, b, dir.r, dir.nr, TRUE, nil, nil, FALSE);
 		return;
+	case 0x7:
 	case Kcmd+'g': /* %B: git grep chooser */
 		dir = dirname(t, nil, 0);
 		if(dir.nr==1 && dir.r[0]=='.'){	/* sigh */
