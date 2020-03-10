@@ -199,7 +199,6 @@ struct Display
 	int		obufsize;
 	uchar		*obufp;
 	Font		*defaultfont;
-	Subfont		*defaultsubfont;
 	Image		*windows;
 	Image		*screenimage;
 	int		_isnewdisplay;
@@ -498,7 +497,6 @@ extern Point	strsubfontwidth(Subfont*, char*);
 extern int	loadchar(Font*, Rune, Cacheinfo*, int, int, char**);
 extern char*	subfontname(char*, char*, int);
 extern Subfont*	_getsubfont(Display*, char*);
-extern Subfont*	getdefont(Display*);
 extern void		lockdisplay(Display*);
 extern void	unlockdisplay(Display*);
 extern int		drawlsetrefresh(u32int, int, void*, void*);
@@ -508,8 +506,6 @@ extern void	swapfont(Font*, Font**, Font**);
 /*
  * Predefined 
  */
-extern	uchar	defontdata[];
-extern	int		sizeofdefont;
 extern	Point		ZP;
 extern	Rectangle	ZR;
 
@@ -524,6 +520,8 @@ extern	int	_cursorfd;
 extern	int	_drawdebug;	/* set to 1 to see errors from flushimage */
 extern	void	_setdrawop(Display*, Drawop);
 extern	Display	*_initdisplay(void(*)(Display*,char*), char*);
+
+extern	void	needdisplay(void); /* call instead of initdraw to get (null) variable linked in */
 
 #define	BGSHORT(p)		(((p)[0]<<0) | ((p)[1]<<8))
 #define	BGLONG(p)		((BGSHORT(p)<<0) | (BGSHORT(p+2)<<16))
@@ -566,9 +564,10 @@ int	mousescrollsize(int);
  */
 struct Mouse;
 struct Cursor;
+struct Cursor2;
 int		_displaybouncemouse(Display *d, struct Mouse *m);
 int		_displayconnect(Display *d);
-int		_displaycursor(Display *d, struct Cursor *c);
+int		_displaycursor(Display *d, struct Cursor *c, struct Cursor2 *c2);
 int		_displayinit(Display *d, char *label, char *winsize);
 int		_displaylabel(Display *d, char *label);
 int		_displaymoveto(Display *d, Point p);

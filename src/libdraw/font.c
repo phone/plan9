@@ -54,7 +54,7 @@ cachechars(Font *f, char **ss, Rune **rr, ushort *cp, int max, int *wp, char **s
 			c++;
 			h++;
 		}
-	
+
 		/*
 		 * Not found; toss out oldest entry
 		 */
@@ -91,7 +91,7 @@ cachechars(Font *f, char **ss, Rune **rr, ushort *cp, int max, int *wp, char **s
 			break;
 		}
 		c = &f->cache[h];	/* may have reallocated f->cache */
-	
+
 	    Found:
 		wid += c->width;
 		c->age = f->age;
@@ -132,8 +132,7 @@ agefont(Font *f)
 			if(s->age){
 				if(s->age<SUBFAGE && s->cf->name != nil){
 					/* clean up */
-					if(display==nil || s->f != display->defaultsubfont)
-						freesubfont(s->f);
+					freesubfont(s->f);
 					s->cf = nil;
 					s->f = nil;
 					s->age = 0;
@@ -222,16 +221,14 @@ loadchar(Font *f, Rune r, Cacheinfo *c, int h, int noflush, char **subfontname)
 			subf->age = 0;
 		}else{				/* too recent; grow instead */
 			of = f->subf;
-			f->subf = malloc((f->nsubf+DSUBF)*sizeof *subf);
+			f->subf = realloc(of, (f->nsubf+DSUBF)*sizeof *subf);
 			if(f->subf == nil){
 				f->subf = of;
 				goto Toss;
 			}
-			memmove(f->subf, of, (f->nsubf+DSUBF)*sizeof *subf);
 			memset(f->subf+f->nsubf, 0, DSUBF*sizeof *subf);
 			subf = &f->subf[f->nsubf];
 			f->nsubf += DSUBF;
-			free(of);
 		}
 	}
 	subf->age = 0;

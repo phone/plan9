@@ -268,9 +268,10 @@ void
 getwidth(void)
 {
 	CFsys *fs;
-	char buf[500], *p, *f[10];
-	int fd, n, nf;
+	char buf[500], *p, *q, *f[10], *fname;
+	int fd, n, nf, scale;
 	struct winsize ws;
+	Font *f1;
 
 	if((p = getenv("winid")) != nil){
 		fs = nsmount("acme", "");
@@ -284,15 +285,19 @@ getwidth(void)
 		buf[n] = 0;
 		if((nf=tokenize(buf, f, nelem(f))) < 7)
 			return;
+		// hidpi font in stringwidth(3) will call scalesubfont,
+		// which aborts in bytesperline, due to unknow depth,
+		// without initdraw.  We scale by ourselves.
+		scale = parsefontscale(f[6], &fname);
 		tabwid = 0;
-		if(nf >= 8 && (tabwid = atoi(f[7])) == 0)
+		if(nf >= 8 && (tabwid = atoi(f[7])/scale) == 0)
 			return;
-		if((font = openfont(nil, f[6])) == nil)
+		if((font = openfont(nil, fname)) == nil)
 			return;
 		mintab = stringwidth(font, "0");
 		if(tabwid == 0)
 			tabwid = mintab*4;
-		linewidth = atoi(f[5]);
+		linewidth = atoi(f[5]) / scale;
 		tabflag = 1;
 		return;
 	}
@@ -306,6 +311,22 @@ getwidth(void)
 	if(ws.ws_xpixel == 0)
 		font = nil;
 	if(font){
+		// 9term leaves "is this a hidpi display" in the low bit of the ypixel height.
+		if(ws.ws_ypixel&1) {
+			// need hidpi font.
+			// loadhifpi creates a font that crashes in stringwidth,
+			// for reasons i don't understand.
+			// do it ourselves
+			p = getenv("font");
+			q = strchr(p, ',');
+			f1 = nil;
+			if(q != nil)
+				f1 = openfont(nil, q+1);
+			if(f1 != nil)
+				font = f1;
+			else
+				ws.ws_xpixel /= 2;
+		}
 		mintab = stringwidth(font, "0");
 		if((p = getenv("tabstop")) != nil)
 			tabwid = atoi(p)*mintab;
@@ -316,4 +337,3 @@ getwidth(void)
 	}else
 		linewidth = ws.ws_col;
 }
-

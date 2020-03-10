@@ -19,6 +19,7 @@ extern "C" {
 #define _BSD_SOURCE 1
 #define _NETBSD_SOURCE 1	/* NetBSD */
 #define _SVID_SOURCE 1
+#define _DEFAULT_SOURCE 1
 #if !defined(__APPLE__) && !defined(__OpenBSD__)
 #	define _XOPEN_SOURCE 1000
 #	define _XOPEN_SOURCE_EXTENDED 1
@@ -65,10 +66,8 @@ typedef long p9jmp_buf[sizeof(sigjmp_buf)/sizeof(long)];
 
 #if defined(__linux__)
 #	include <sys/types.h>
-#	if defined(__Linux26__)
-#		include <pthread.h>
-#		define PLAN9PORT_USING_PTHREADS 1
-#	endif
+#	include <pthread.h>
+#	define PLAN9PORT_USING_PTHREADS 1
 #	if defined(__USE_MISC)
 #		undef _NEEDUSHORT
 #		undef _NEEDUINT
@@ -85,10 +84,8 @@ typedef long p9jmp_buf[sizeof(sigjmp_buf)/sizeof(long)];
 #elif defined(__FreeBSD__)
 #	include <sys/types.h>
 #	include <osreldate.h>
-#	if __FreeBSD_version >= 500000
-#		define PLAN9PORT_USING_PTHREADS 1
-#		include <pthread.h>
-#	endif
+#	define PLAN9PORT_USING_PTHREADS 1
+#	include <pthread.h>
 #	if !defined(_POSIX_SOURCE)
 #		undef _NEEDUSHORT
 #		undef _NEEDUINT

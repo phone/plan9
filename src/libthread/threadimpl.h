@@ -15,20 +15,11 @@
 #include "libc.h"
 #include "thread.h"
 
-#if defined(__FreeBSD__) && __FreeBSD__ < 5
-extern	int		getmcontext(mcontext_t*);
-extern	void		setmcontext(mcontext_t*);
-#define	setcontext(u)	setmcontext(&(u)->uc_mcontext)
-#define	getcontext(u)	getmcontext(&(u)->uc_mcontext)
-extern	int		swapcontext(ucontext_t*, ucontext_t*);
-extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
-#endif
-
 #if defined(__APPLE__)
 	/*
 	 * OS X before 10.5 (Leopard) does not provide
 	 * swapcontext nor makecontext, so we have to use our own.
-	 * In theory, Leopard does provide them, but when we use 
+	 * In theory, Leopard does provide them, but when we use
 	 * them, they seg fault.  Maybe we're using them wrong.
 	 * So just use our own versions, even on Leopard.
 	 */
@@ -63,20 +54,6 @@ extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #	endif
 extern pid_t rfork_thread(int, void*, int(*)(void*), void*);
 #endif
-
-/* THIS DOES NOT WORK!  Don't do this!
-(At least, not on Solaris.  Maybe this is right for Linux,
-in which case it should say if defined(__linux__) && defined(__sun__),
-but surely the latter would be defined(__sparc__).
-
-#if defined(__sun__)
-#	define mcontext libthread_mcontext
-#	define mcontext_t libthread_mcontext_t
-#	define ucontext libthread_ucontext
-#	define ucontext_t libthread_ucontext_t
-#	include "sparc-ucontext.h"
-#endif
-*/
 
 #if defined(__arm__)
 int mygetmcontext(ulong*);
@@ -187,7 +164,6 @@ struct Proc
 };
 
 #define proc() _threadproc()
-#define setproc(p) _threadsetproc(p)
 
 extern Proc *_threadprocs;
 extern Lock _threadprocslock;
@@ -198,7 +174,7 @@ extern Channel *_dowaitchan;
 
 extern void _procstart(Proc*, void (*fn)(Proc*));
 extern _Thread *_threadcreate(Proc*, void(*fn)(void*), void*, uint);
-extern void _threadexit(void);
+extern void _procexit(void);
 extern Proc *_threadproc(void);
 extern void _threadsetproc(Proc*);
 extern int _threadlock(Lock*, int, ulong);
@@ -210,3 +186,8 @@ extern void _threadsetupdaemonize(void);
 extern void _threaddodaemonize(char*);
 extern void _threadpexit(void);
 extern void _threaddaemonize(void);
+extern void *_threadstkalloc(int);
+extern void _threadstkfree(void*, int);
+
+#define USPALIGN(ucp, align) \
+	(void*)((((uintptr)(ucp)->uc_stack.ss_sp+(ucp)->uc_stack.ss_size)-(align))&~((align)-1))

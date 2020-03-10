@@ -138,7 +138,7 @@ typedef struct {
 	char	*err;		/* errmsg */
 } Instr;
 
-#define	IBF(v,a,b) (((ulong)(v)>>(32-(b)-1)) & ~(~0L<<(((b)-(a)+1))))
+#define	IBF(v,a,b) (((ulong)(v)>>(32-(b)-1)) & ~(~0UL<<(((b)-(a)+1))))
 #define	IB(v,b) IBF((v),(b),(b))
 
 static void
@@ -165,7 +165,7 @@ decode(ulong pc, Instr *i)
 	i->crbb = IBF(w, 16, 20);
 	i->bd = IBF(w, 16, 29)<<2;
 	if(i->bd & 0x8000)
-		i->bd |= ~0L<<16;
+		i->bd |= ~0UL<<16;
 	i->crfd = IBF(w, 6, 8);
 	i->crfs = IBF(w, 11, 13);
 	i->bi = IBF(w, 11, 15);
@@ -181,7 +181,7 @@ decode(ulong pc, Instr *i)
 	i->crm = IBF(w, 12, 19);
 	i->li = IBF(w, 6, 29)<<2;
 	if(IB(w, 6))
-		i->li |= ~0<<25;
+		i->li |= ~0UL<<25;
 	i->lk = IB(w, 31);
 	i->mb = IBF(w, 21, 25);
 	i->me = IBF(w, 26, 30);
@@ -960,7 +960,7 @@ static	Spr	sprname[] = {
 	{26, "SRR0"},
 	{27, "SRR1"},
 	{284, "TBLW"},
-	{285, "TBUW"},	
+	{285, "TBUW"},
 	{22, "DEC"},
 	{282, "EAR"},
 	{1008, "HID0"},
@@ -1213,7 +1213,7 @@ powerfoll(Map *map, Regs *regs, u64int pc, u64int *foll)
 		if(!i.aa)
 			foll[0] += pc;
 		break;
-			
+
 	case 16:	/* conditional branch */
 		foll[0] = i.bd;
 		if(!i.aa)
@@ -1246,7 +1246,7 @@ powerfoll(Map *map, Regs *regs, u64int pc, u64int *foll)
 #define FP_REG(x)	(R31+4+8*(x))
 
 #define	REGSIZE		sizeof(struct Ureg)
-#define	FPREGSIZE	(8*33)	
+#define	FPREGSIZE	(8*33)
 
 Regdesc powerreglist[] =
 {
@@ -1328,7 +1328,7 @@ Regdesc powerreglist[] =
 	{  0 }
 };
 
-static char *powerwindregs[] = 
+static char *powerwindregs[] =
 {
 	"PC",
 	"SP",
@@ -1404,4 +1404,3 @@ Mach machpower =
 	powerhexinst,		/* print instruction */
 	powerinstlen,		/* instruction size calculation */
 };
-

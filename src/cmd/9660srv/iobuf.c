@@ -14,7 +14,7 @@
  * tarring up a Plan 9 distribution CD, we now use 16 128kb
  * buffers.  This works for ISO9660 because data is required
  * to be laid out contiguously; effectively we're doing agressive
- * readahead.  Because the buffers are so big and the typical 
+ * readahead.  Because the buffers are so big and the typical
  * disk accesses so concentrated, it's okay that we have so few
  * of them.
  *
@@ -46,8 +46,8 @@ iobuf_init(void)
 
 	n = nclust*sizeof(Ioclust) +
 		nclust*BUFPERCLUST*(sizeof(Iobuf)+Sectorsize);
-	mem = sbrk(n);
-	if(mem == (void*)-1)
+	mem = malloc(n);
+	if(mem == (void*)0)
 		panic(0, "iobuf_init");
 	memset(mem, 0, n);
 

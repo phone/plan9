@@ -14,6 +14,10 @@ usegcc()
 		-Wno-comment \
 		-Wno-sign-compare \
 		-Wno-unknown-pragmas \
+		-Wno-misleading-indentation \
+		-Wno-stringop-truncation \
+		-Wno-stringop-overflow \
+		-Wno-format-truncation \
 		-fno-omit-frame-pointer \
 		-fsigned-char \
 	"
@@ -41,8 +45,10 @@ quiet()
 	ignore=$ignore'|        from'
 	ignore=$ignore'|use of C99 long long'
 	ignore=$ignore'|ISO C forbids conversion'
+	ignore=$ignore'|marked deprecated'
 	ignore=$ignore'|is deprecated'
 	ignore=$ignore'|warn_unused_result'
+	ignore=$ignore'|expanded from macro'
 
 	grep -v '__p9l_autolib_' $1 |
 	egrep -v "$ignore" |
@@ -77,41 +83,30 @@ useclang()
 
 tag="${SYSNAME:-`uname`}-${OBJTYPE:-`uname -m`}-${CC9:-cc}"
 case "$tag" in
-*FreeBSD*gcc*)	usegcc ;;
-*FreeBSD*clang*)	useclang ;;
-*DragonFly*|*BSD*)	usegcc ;;
-*Darwin-x86_64*clang*)
+*DragonFly*gcc*|*BSD*gcc*)	usegcc ;;
+*DragonFly*clang|*BSD*clang*)	useclang ;;
+*Darwin-x86_64*)
 		useclang
 		cflags="$ngflags -g3 -m64"
 		;;
-*Darwin-x86_64*) usegcc
-		cflags="$ngflags -g3 -no-cpp-precomp -m64" ;;
 *Darwin*clang*)
 		useclang
 		cflags="$ngflags -g3 -m32"
 		;;
-*Darwin*)	usegcc 
+*Darwin*)	usegcc
 		cflags="$ngflags -g3 -no-cpp-precomp -m32" ;;
 *HP-UX*)	cc=${CC9:-cc}; cflags="-g -O -c -Ae" ;;
-*Linux*)	usegcc 
+*Linux*)	usegcc
 		case "${CC9:-gcc}" in
 		tcc)
 			cc=tcc
 			cflags="-c -g"
 			;;
 		esac
-		case "${SYSVERSION:-`uname -r`}" in
-		2.4.*)
-			cflags="$cflags -D__Linux24__"
-			;;
-		2.6.*)
-			cflags="$cflags -D__Linux26__"
-			;;
-		esac
 		;;
 *OSF1*)		cc=${CC9:-cc}; cflags="-g -O -c" ;;
 *SunOS*-cc)	cc=cc;
-		cflags="-mt -g -O -c -xCC -D__sun__" 
+		cflags="-mt -g -O -c -xCC -D__sun__"
 		u=`uname`
 		v=`uname -r`
 		s=`echo $u$v | tr '. ' '__'`
@@ -133,7 +128,7 @@ case "$tag" in
 esac
 
 # N.B. Must use temp file to avoid pipe; pipe loses status.
-xtmp=/tmp/9c.$$.$USER.out
+xtmp=${TMPDIR-/tmp}/9c.$$.$USER.out
 $cc -DPLAN9PORT -I$PLAN9/include $cflags "$@" 2>$xtmp
 status=$?
 quiet $xtmp

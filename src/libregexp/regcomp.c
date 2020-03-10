@@ -15,9 +15,6 @@ struct Node
 	Reinst*	last;
 }Node;
 
-/* max character classes per program is nelem(reprog->class) */
-static Reprog	*reprog;
-
 /* max rune ranges per character class is nelem(classp->spans)/2 */
 #define NCCRUNE	nelem(classp->spans)
 
@@ -112,7 +109,7 @@ regerr2(char *s, int c)
 	while(*s)
 		*cp++ = *s++;
 	*cp++ = c;
-	*cp = '\0'; 
+	*cp = '\0';
 	rcerror(buf);
 }
 
@@ -238,7 +235,7 @@ optimize(Reprog *pp)
 	int size;
 	Reprog *npp;
 	Reclass *cl;
-	int diff;
+	ptrdiff_t diff;
 
 	/*
 	 *  get rid of NOOP chains
@@ -327,7 +324,7 @@ dump(Reprog *pp)
 static	Reclass*
 newclass(void)
 {
-	if(nclass >= nelem(reprog->class))
+	if(nclass >= nelem(((Reprog*)0)->class))
 		rcerror("too many character classes; increase Reprog.class size");
 	return &(classp[nclass++]);
 }

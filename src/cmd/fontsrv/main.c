@@ -13,8 +13,6 @@
 
 #include "a.h"
 
-Memsubfont *defont;
-
 void
 usage(void)
 {
@@ -72,7 +70,7 @@ dostat(vlong path, Qid *qid, Dir *dir)
 	vlong length;
 	XFont *f;
 	char buf[100];
-	
+
 	q.type = 0;
 	q.vers = 0;
 	q.path = path;
@@ -100,7 +98,7 @@ dostat(vlong path, Qid *qid, Dir *dir)
 		snprint(buf, sizeof buf, "%lld%s", QSIZE(path), QANTIALIAS(path) ? "a" : "");
 		name = buf;
 		break;
-	
+
 	case Qfontfile:
 		f = &xfont[QFONT(path)];
 		load(f);
@@ -113,7 +111,7 @@ dostat(vlong path, Qid *qid, Dir *dir)
 		name = buf;
 		break;
 	}
-	
+
 	if(qid)
 		*qid = q;
 	if(dir) {
@@ -216,7 +214,7 @@ fontgen(int i, Dir *d, void *v)
 {
 	vlong path;
 	Fid *f;
-	
+
 	f = v;
 	path = f->qid.path;
 	if(i >= 2*nelem(sizes))
@@ -282,7 +280,7 @@ void
 responderrstr(Req *r)
 {
 	char err[ERRMAX];
-	
+
 	rerrstr(err, sizeof err);
 	respond(r, err);
 }
@@ -297,7 +295,7 @@ xread(Req *r)
 	char *data;
 	Memsubfont *sf;
 	Memimage *m;
-	
+
 	path = r->fid->qid.path;
 	switch(QTYPE(path)) {
 	case Qroot:
@@ -379,7 +377,7 @@ static void
 xdestroyfid(Fid *fid)
 {
 	Memsubfont *sf;
-	
+
 	sf = fid->aux;
 	if(sf == nil)
 		return;
@@ -422,7 +420,7 @@ dump(char *path)
 
 	// root
 	memset(&fid, 0, sizeof fid);
-	dostat(0, &fid.qid, nil);	
+	dostat(0, &fid.qid, nil);
 	qid = fid.qid;
 
 	path0 = path;
@@ -442,7 +440,7 @@ dump(char *path)
 			*p++ = '/';
 		path = p;
 	}
-	
+
 	memset(&r, 0, sizeof r);
 	xsrv.fake = 1;
 
@@ -515,7 +513,7 @@ main(int argc, char **argv)
 	default:
 		usage();
 	}ARGEND
-	
+
 	xsrv.attach = xattach;
 	xsrv.open = xopen;
 	xsrv.read = xread;
@@ -526,10 +524,9 @@ main(int argc, char **argv)
 	fmtinstall('R', Rfmt);
 	fmtinstall('P', Pfmt);
 	memimageinit();
-	defont = getmemdefont();
 	loadfonts();
 	qsort(xfont, nxfont, sizeof xfont[0], fontcmp);
-	
+
 	if(pflag) {
 		if(argc != 1 || chatty9p || chattyfuse)
 			usage();
@@ -603,4 +600,3 @@ dirpackage(uchar *buf, long ts, Dir **d)
 
 	return nn;
 }
-
